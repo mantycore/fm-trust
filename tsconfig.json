@@ -11,8 +11,12 @@
     "strict": true,
     "sourceMap": true,
     "target": "esnext",
+    "baseUrl": "./",
+    "paths": {
+      "Common/*": ["src/common/*"]
+    },
   },
   "exclude": [
     "node_modules"
-  ]
+  ],
 }

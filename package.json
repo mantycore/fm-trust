@@ -12,16 +12,36 @@
     "mini-css-extract-plugin": "^2.6.0",
     "ts-loader": "^9.3.0",
     "typescript": "^4.6.4",
-    "webpack": "^5.72.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.8.1"
   },
   "scripts": {
-    "start": "webpack serve --port 3000",
+    "start": "webpack serve --port 3000 --history-api-fallback",
     "build": "cross-env NODE_ENV=production webpack"
   },
   "dependencies": {
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0"
+    "@lagunovsky/redux-react-router": "^2.2.0",
+    "@reduxjs/toolkit": "^1.8.1",
+    "@types/react-redux": "^7.1.24",
+    "buffer": "^6.0.3",
+    "bufferutil": "^4.0.6",
+    "crypto-browserify": "^3.12.0",
+    "history": "^5.3.0",
+    "js-base64": "^3.7.2",
+    "peer-relay": "^0.0.2",
+    "process": "^0.11.10",
+    "react": "17",
+    "react-dom": "17",
+    "react-hook-form": "^7.30.0",
+    "react-redux": "^8.0.1",
+    "react-router": "^6.3.0",
+    "react-router-dom": "^6.3.0",
+    "redux-observable": "^2.0.0",
+    "stream-browserify": "^3.0.0",
+    "tweetnacl": "^1.0.3",
+    "typescript-is": "^0.19.0",
+    "utf-8-validate": "^5.0.9",
+    "util": "^0.12.4",
+    "webpack": "^5.72.0"
   }
 }
