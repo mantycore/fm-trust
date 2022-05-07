@@ -27,7 +27,9 @@ export default function StaticProfile({publicKey}: {publicKey: string}) {
           {whoTrustsList.length}
         </div>
       </div>
-      <div style={{padding: 20}}>{profile.bio}</div>
+      <h2>{profile.nickname}</h2>
+      <div style={{padding: 20}}>{profile.about}</div>
+      <div style={{padding: 20}}>{profile.tags.join(', ')}</div>
     </>
   } else {
     return <>Профиля с таким ключом нет в системе, или он ещё не получен от других узлов.</>

@@ -16,6 +16,7 @@ export interface PeerRelayType {
   on(messageType: 'peer', handler: (id: Buffer) => void): void
   on(messageType: 'message', handler: (data: any, from: Buffer) => void): void
   send(id: Buffer, data: any): void
+  connect(id: Buffer): void
   id: Buffer
 }
 
@@ -28,4 +29,7 @@ export interface Haiku {
 export type Mantra = {
   type: 'haiku'
   haiku: Haiku
+} | {
+  type: 'peer',
+  peer: string
 }

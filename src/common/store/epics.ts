@@ -8,6 +8,7 @@ import { commonSlice} from './slice'
 import { CommonState } from './state'
 import { assertType } from 'typescript-is'
 import { Mantra, Haiku } from 'Common/types'
+import { fromUint8Array, toUint8Array } from 'js-base64'
 
 let peer: PeerRelayType
 
@@ -24,21 +25,32 @@ export const commonEpic: CommonEpic = combineEpics(
       // console.log("INIT", fromUint8Array(peer.id))
 
       peer.on('peer', id => {
+        //TODO: dispatch separate epic!
         //TODO: better replication
-        // console.log("PEER", fromUint8Array(id))
+        const idString = fromUint8Array(id, true)
+        console.log("PEER", idString)
+
         Object.keys(state$.value.common.kushu).forEach(haikuKey => {
           peer.send(id, {type: 'haiku', haiku: state$.value.common.kushu[haikuKey]})
         })
-        subscriber.next(commonSlice.actions.peer({id: id.toString('hex')}))
+
+        Object.keys(state$.value.common.peers).forEach(oldPeer => {
+          peer.send(Buffer.from(toUint8Array(oldPeer)), {type: 'peer', peer: idString})
+        })
+        
+        subscriber.next(commonSlice.actions.peer({id: idString}))
       })
 
       peer.on('message', (data, from) => {
         const mantra = assertType<Mantra>(data)
+        console.log("MESG", fromUint8Array(from, true), data)
         if (mantra.type === 'haiku') {
-          // console.log("MESG", fromUint8Array(from), data)
           if (!(mantra.haiku.publicKey in state$.value.common.kushu)) {
             subscriber.next(commonSlice.actions.haiku(mantra.haiku))
           }
+        } else if (mantra.type === 'peer') {
+          peer.connect(Buffer.from(toUint8Array(mantra.peer)))
+          subscriber.next(commonSlice.actions.peer({id: mantra.peer}))
         }
       })
 
@@ -49,7 +61,7 @@ export const commonEpic: CommonEpic = combineEpics(
     filter(broadcast.match),
     mergeMap(action => {
       Object.keys(state$.value.common.peers).forEach(peerId => {
-        peer.send(Buffer.from(peerId, 'hex'), {type: 'haiku', haiku: action.payload})      
+        peer.send(Buffer.from(toUint8Array(peerId)), {type: 'haiku', haiku: action.payload})      
       });
       return EMPTY
     })

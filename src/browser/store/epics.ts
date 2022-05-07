@@ -6,12 +6,13 @@ import { push, replace, ROUTER_ON_LOCATION_CHANGED  } from '@lagunovsky/redux-re
 import { commonSlice } from 'Common/store/slice'
 import { broadcast } from 'Common/store/epics'
 import { Profile, ProfileFormData, Trust, Psalm } from '../types'
+import { Haiku } from 'Common/types'
 import { decrypt, encrypt } from '../crypto'
 import { browserSlice } from './slice'
 import { RootState } from './store'
 
 import nacl from 'tweetnacl'
-import { fromUint8Array } from 'js-base64'
+import { fromUint8Array, toUint8Array } from 'js-base64'
 
 type BrowserEpic = Epic<AnyAction, AnyAction, RootState> //TODO: fix types
 
@@ -41,7 +42,7 @@ const initEpic: BrowserEpic  =
   )
 
 const updateProfileEpic: BrowserEpic =  
-  action$ => action$.pipe(
+  (action$, state$) => action$.pipe(
     filter(updateProfile.match),
     mergeMap(({payload: {formData, mode}}) => {
       if (mode === 'registration') {
@@ -71,6 +72,43 @@ const updateProfileEpic: BrowserEpic =
           browserSlice.actions.setProfile(profile),
           push(`/profile/${ownPublicKeyString}`)
         )
+      } else if (mode === 'existing') {
+        const state = state$.value
+
+        const { publicKey: ownPublicKeyString, secretKey: ownSecretKeyString } = state.browser
+        if (!ownPublicKeyString || !ownSecretKeyString) { return EMPTY }
+        const { publicKey: oneTimePublicKey, secretKey: oneTimeSecretKey } = nacl.box.keyPair()
+  
+        const ownPublicKey = toUint8Array(ownPublicKeyString)
+        const ownSecretKey = toUint8Array(ownSecretKeyString)
+        const oneTimeSecretKeyString = fromUint8Array(oneTimeSecretKey, true)
+
+        const profile: Profile = {...formData, publicKey: ownPublicKeyString, timestamp: new Date().valueOf()}
+        const psalm: Psalm = {type: 'profile', profile}
+        const ownHaiku = encrypt(psalm, ownPublicKey, ownSecretKey, ownPublicKey)
+        const oneTimeHaiku = encrypt(psalm, oneTimePublicKey, ownSecretKey, ownPublicKey)
+
+        const trustedKeysObject = state.browser.trustFrom[ownPublicKeyString] || {}
+        const trustedPublicKeys = Object.keys(trustedKeysObject)
+
+        const broadcastObjects = trustedPublicKeys.map(key => {
+          console.log("sending for", key, psalm )
+          return broadcast(
+            encrypt(psalm, key, ownSecretKey, ownPublicKey)
+          )
+        })
+
+        const outsideProfileLink = [oneTimeSecretKeyString, oneTimeHaiku.publicKey].join('~')
+
+        //TODO: maybe not regenerate the outsid profile link each time? Do it on user's request?
+        localStorage.setItem('outsideProfileLink', outsideProfileLink)
+        return of(
+          broadcast(ownHaiku),
+          broadcast(oneTimeHaiku),
+          ...broadcastObjects,
+          browserSlice.actions.setOutsideProfileLink(outsideProfileLink),
+          browserSlice.actions.setProfile(profile)
+        )
       }
       return EMPTY
     })
@@ -86,6 +124,7 @@ const haikuEpic: BrowserEpic = (action$, state$) =>
         if (decrypted) {
           const {psalm, fromPublicKey} = decrypted
           if (psalm.type === 'profile') { //TODO: check that fromPublicKey is among trusted? what about the outside link?
+            console.log("incoming profile", psalm.profile)
             return of(browserSlice.actions.setProfile(psalm.profile))
           } else if (psalm.type === 'trust' && fromPublicKey === psalm.trust.from) {
             return of(browserSlice.actions.setTrust(psalm.trust))
@@ -149,17 +188,35 @@ const updateTrustEpic: BrowserEpic =
       }
 
       const trustedKeysObject = state.browser.trustFrom[myPublicKey] || {}
+      const trustedPublicKeys = Object.keys(trustedKeysObject)
       const theirPublicKeys = Object.keys(trustedKeysObject)
       if (!(action.payload.publicKey in trustedKeysObject)) {
         theirPublicKeys.push(action.payload.publicKey)
       }
       theirPublicKeys.push(myPublicKey)
 
-      const broadcastActions = theirPublicKeys.map(theirPublicKey =>
-        broadcast(encrypt({type: 'trust', trust}, theirPublicKey, mySecretKey, myPublicKey)))
+      //type BC = ReturnType<typeof broadcast>
+      const kushu: Haiku[] = theirPublicKeys.map(theirPublicKey => encrypt({type: 'trust', trust}, theirPublicKey, mySecretKey, myPublicKey))
+        .concat(trustedPublicKeys.filter(key => key !== action.payload.publicKey).map(trustedPublicKey => encrypt(
+          {
+            type: 'trust',
+            trust: {
+              from: myPublicKey,
+              to: trustedPublicKey,
+              value: true,
+              timestamp: new Date().valueOf()
+            }
+          },
+          action.payload.publicKey,
+          mySecretKey,
+          myPublicKey
+        )))
+        .concat([
+          encrypt({type: 'profile', profile: state.browser.profiles[myPublicKey]}, action.payload.publicKey, mySecretKey, myPublicKey)
+        ])
 
       return of(
-        ...broadcastActions,
+        ...(kushu.map(haiku => broadcast(haiku))),
         browserSlice.actions.setTrust(trust)
       )
     })

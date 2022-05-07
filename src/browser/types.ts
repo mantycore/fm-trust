@@ -7,7 +7,11 @@ export type Psalm = {
 }
 
 export interface ProfileFormData {
-  bio: string
+  nickname: string
+  about: string
+  tags: string[]
+
+  //visibility: 'trusted' | 'trustedOfTrusted' | 'all'
 }
 
 export type Profile = ProfileFormData & {
