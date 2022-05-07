@@ -1,6 +1,7 @@
 import nacl from 'tweetnacl'
 import { fromUint8Array, toUint8Array } from 'js-base64'
-import type { Haiku, Psalm } from 'Common/types'
+import { Haiku } from 'Common/types'
+import { Psalm } from './types'
 import { assertType } from 'typescript-is' 
 
 
@@ -34,10 +35,24 @@ export function decrypt(haiku: Haiku, toSecretKeyString: string) {
 
 // this convoluted encryption scheme is necessary to able both sign content with public key
 // and distribute it anonymously
-export function encrypt(psalm: Psalm, toPublicKey: Uint8Array, fromPrivateKey: Uint8Array, fromPublicKey: Uint8Array): Haiku {
+export function encrypt(
+  psalm: Psalm,
+  toPublicKey: Uint8Array | string,
+  fromSecretKey: Uint8Array | string,
+  fromPublicKey: Uint8Array | string
+) : Haiku {
+  if (typeof toPublicKey === 'string') {
+    toPublicKey = toUint8Array(toPublicKey)
+  }
+  if (typeof fromSecretKey === 'string') {
+    fromSecretKey = toUint8Array(fromSecretKey)
+  }
+  if (typeof fromPublicKey === 'string') {
+    fromPublicKey = toUint8Array(fromPublicKey)
+  }
 
   const innerNonce = nacl.randomBytes(24)
-  const innerBox = nacl.box(Buffer.from(JSON.stringify(psalm)), innerNonce, toPublicKey, fromPrivateKey)
+  const innerBox = nacl.box(Buffer.from(JSON.stringify(psalm)), innerNonce, toPublicKey, fromSecretKey)
 
   const innerCypher = {
     box: fromUint8Array(innerBox, true),

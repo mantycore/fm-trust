@@ -29,8 +29,3 @@ export type Mantra = {
   type: 'haiku'
   haiku: Haiku
 }
-
-export interface Psalm {
-  type: string
-  content: any
-}

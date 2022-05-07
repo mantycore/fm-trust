@@ -10,7 +10,7 @@ function App () {
   const myPublicKey = useSelector((state: RootState) => state.browser.publicKey)
   const outsideProfileLink = useSelector((state: RootState) => state.browser.outsideProfileLink)
   return <>
-    <div style={{backgroundColor: 'wheat', padding: 20}}>Это экспериментальный прототип системы доверия для платформы Freemapping.
+    <div style={{backgroundColor: 'wheat', padding: 20, fontSize: 8}}>Это экспериментальный прототип системы доверия для платформы Freemapping.
       <br/>Внимание!
       <ul>
         <li>На данный момент введённые данные не сохраняются на диск и исчезнут при перезагрузке системы.</li>
@@ -23,7 +23,7 @@ function App () {
         </li>
       </ul>
     </div>
-    <div style={{backgroundColor: 'skyblue', padding: 20}}>
+    <div style={{backgroundColor: 'skyblue', padding: 20, fontSize: 8}}>
       Навигация:
       <ul>
         <li>{myPublicKey ? <Link to={`/profile/${myPublicKey}`}>Мой профиль</Link>
